@@ -1,0 +1,117 @@
+---
+- hosts: all
+
+  tasks:
+    - name: Update repository index
+      ansible.builtin.package:
+        update_cache: true
+        upgrade: dist
+
+- hosts: kamailio
+  become: true
+
+  tasks:
+    - name: Generate password
+      set_fact:
+        password: "{{ lookup('community.general.random_string', length=12, min_lower=1, min_upper=1, min_numeric=1, min_special=0, override_special='!#') }}"
+
+    - name: Display Password
+      ansible.builtin.debug:
+        msg: Kamailio Database password {{ password }}
+
+    - name: write to file
+      ansible.builtin.copy:
+        content: "Password for Kamailio {{ password }}"
+        dest: "~/kamailio_password.txt"
+
+    - name: Upgrade OS
+      tags: always
+      ansible.builtin.package:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install Kamailio, sngrep, htop and other packages
+      ansible.builtin.package:
+        name:
+          - sngrep
+          - net-tools
+          - curl
+          - wget
+          - htop
+          - python3-pymysql
+          - kamailio
+          - kamailio-extra-modules
+          - kamailio-geoip2-modules
+          - kamailio-json-modules
+          - kamailio-memcached-modules
+          - kamailio-mysql-modules
+          - kamailio-nats-modules
+          - kamailio-outbound-modules
+          - kamailio-presence-modules
+          - kamailio-utils-modules
+          - kamailio-websocket-modules
+          - kamailio-xml-modules
+        state: present
+
+    - name: Ensure Kamailio service is started
+      ansible.builtin.systemd:
+        name: kamailio
+        state: started
+        enabled: yes
+
+    - name: Install mariadb
+      ansible.builtin.package:
+        name:
+          - mariadb-server
+
+    - name: Set MYSQL in kamctrl
+      ansible.builtin.replace:
+        path: /etc/kamailio/kamctlrc
+        regexp: '(^# DBENGINE=MYSQL\s)(.*)$'
+        replace: '\1DBENGINE=MYSQL'
+        backup: yes
+
+    - name: Set MYSQL password for kamctrl
+      ansible.builtin.replace:
+        path: /etc/kamailio/kamctlrc
+        regexp: '(^# DBROOTPW=""\s)(.*)$'
+        replace: '\1DBROOTPW=""'
+        backup: no
+
+    - name: Set MYSQL latin1
+      ansible.builtin.replace:
+        path: /etc/kamailio/kamctlrc
+        regexp: '(^#CHARSET="latin1"\s)(.*)$'
+        replace: '\1CHARSET="latin1"'
+        backup: no
+
+    - name: Set MYSQL INSTALL_EXTRA_TABLES=yes
+      ansible.builtin.replace:
+        path: /etc/kamailio/kamctlrc
+        regexp: '(^# INSTALL_EXTRA_TABLES=ask\s)(.*)$'
+        replace: '\1INSTALL_EXTRA_TABLES=yes'
+        backup: no
+
+    - name: Set MYSQL INSTALL_PRESENCE_TABLES=yes
+      ansible.builtin.replace:
+        path: /etc/kamailio/kamctlrc
+        regexp: '(^# INSTALL_PRESENCE_TABLES=ask\s)(.*)$'
+        replace: '\1INSTALL_PRESENCE_TABLES=yes'
+        backup: no
+
+    - name: Set MYSQL # INSTALL_DBUID_TABLES=yes
+      ansible.builtin.replace:
+        path: /etc/kamailio/kamctlrc
+        regexp: '(^# INSTALL_DBUID_TABLES=ask\s)(.*)$'
+        replace: '\1INSTALL_DBUID_TABLES=yes'
+        backup: no
+
+    - name: Set MYSQL # INSTALL_DBUID_TABLES=yes
+      ansible.builtin.replace:
+        path: /etc/kamailio/kamctlrc
+        regexp: '(^# DBRWPW="kamailiorw"\s)(.*)$'
+        replace: '\1DBRWPW="{{ password }}"'
+        backup: no
+
+    - name: Run a shell command on a remote host
+      shell: echo | kamdbctl create

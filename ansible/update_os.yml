@@ -1,0 +1,8 @@
+---
+- hosts: all
+
+  tasks:
+    - name: Update repository index
+      ansible.builtin.package:
+        update_cache: true
+        upgrade: dist

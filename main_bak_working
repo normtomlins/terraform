@@ -1,0 +1,34 @@
+terraform {
+  required_providers {
+    proxmox = {
+      source = "telmate/proxmox"
+    }
+  }
+}
+
+provider "proxmox" {
+  pm_api_url = "https://192.168.8.151:8006/api2/json"
+  pm_api_token_id = "root@pam!TerraForm"
+  pm_api_token_secret = "a1833fe1-84b0-4fa6-b265-3d4db1ca5494"
+  pm_tls_insecure = true
+}
+
+resource "proxmox_lxc" "basic" {
+  target_node  = "pve"
+  hostname     = "lxc-basic"
+  ostemplate   = "local:vztmpl/ubuntu-23.10-standard_23.10-1_amd64.tar.zst"
+  password     = "BasicLXCContainer"
+  unprivileged = true
+
+  // Terraform will crash without rootfs defined
+  rootfs {
+    storage = "local-lvm"
+    size    = "8G"
+  }
+
+  network {
+    name   = "eth0"
+    bridge = "vmbr0"
+    ip     = "dhcp"
+  }
+}

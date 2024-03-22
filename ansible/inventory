@@ -1,0 +1,10 @@
+Ubuntu-N0.home
+Ubuntu-N1.home
+Ubuntu-N2.home
+
+[kamailio]
+Ubuntu-N2.home
+Ubuntu-N3.home
+
+[freeswitch]
+freeswitch.home
